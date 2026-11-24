@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateEntry,incomeStatement,position} from '../lib/accounting.mjs';
+import {validateEntry,validateOpening,incomeStatement,position} from '../lib/accounting.mjs';
 const line=(account,debit,credit)=>({account,name:account,debit,credit});
 test('venta gravada de 1180 y costo de 600',()=>{
  const entries=[{lines:[line('12',1180,0),line('40',0,180),line('70',0,1000)]},{lines:[line('69',600,0),line('20',0,600)]}];
@@ -17,4 +17,11 @@ test('destino de mercaderías no convierte la compra en gasto',()=>{
  entries.forEach(validateEntry);
  assert.equal(incomeStatement(entries).net,0);
  assert.equal(position(entries).difference,0);
+});
+test('apertura cuadrada y prevención de duplicados por ejercicio',()=>{
+ const entry={date:'2026-01-01',lines:[line('10',2000,0),line('42',0,500),line('50',0,1500)]};
+ assert.equal(validateOpening(entry,[]),true);
+ assert.throws(()=>validateOpening(entry,[{type:'Apertura',date:'2026-02-01'}]),/Ya existe/);
+ assert.throws(()=>validateOpening({...entry,lines:[line('60',2000,0),line('50',0,2000)]},[]),/solo admite/);
+ assert.equal(position([entry]).difference,0);
 });

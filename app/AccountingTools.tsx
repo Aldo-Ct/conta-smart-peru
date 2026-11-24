@@ -3,12 +3,34 @@ import { useMemo, useState } from 'react';
 import { validateEntry, validateOpening } from '../lib/accounting.mjs';
 
 export type Line={account:string;name:string;debit:number;credit:number};
-export type Entry={id:string;date:string;type:string;memo:string;lines:Line[]};
+export type Entry={id:string;date:string;type:string;memo:string;reference?:string;lines:Line[]};
 export type Account={code:string;name:string;nature:string;official:boolean};
 const format=(x:number)=>new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'}).format(x);
 const dateString=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
-export function OpeningBalance({accounts,entries,save}:{accounts:Account[];entries:Entry[];save:(entry:Entry)=>void}) {
+export function Periods({closed,onClose,onReopen}:{closed:string[];onClose:(period:string)=>void;onReopen:(period:string)=>void}) {
+ const [period,setPeriod]=useState(dateString().slice(0,7));
+ const isClosed=closed.includes(period);
+ return <><div className="title"><div><h1>Periodos contables</h1><p>Bloquee nuevos asientos para un mes en este navegador.</p></div></div><div className="card form"><label>Periodo<input type="month" value={period} onChange={e=>setPeriod(e.target.value)}/></label><p>Estado: <b>{isClosed?'Cerrado':'Abierto'}</b></p>{isClosed?<button className="primary" onClick={()=>{if(confirm(`¿Reabrir ${period}? Se permitirá registrar nuevas operaciones.`))onReopen(period)}}>Reabrir periodo</button>:<button className="primary" onClick={()=>{if(period&&confirm(`¿Cerrar ${period}? No se podrán registrar nuevos asientos en este periodo.`))onClose(period)}}>Cerrar periodo</button>}<p className="hint">Control local sin autenticación ni auditoría. La reapertura no requiere autorización; no sustituye un control empresarial.</p></div></>;
+}
+
+export function ManualEntry({accounts,close,save}:{accounts:Account[];close:()=>void;save:(entry:Entry)=>void}) {
+ const [date,setDate]=useState(dateString()),[memo,setMemo]=useState(''),[reference,setReference]=useState(''),[error,setError]=useState('');
+ const initial=(a:Account):Line=>({account:a.code,name:a.name,debit:0,credit:0});
+ const [lines,setLines]=useState<Line[]>(()=>[initial(accounts[0]),initial(accounts[1]||accounts[0])]);
+ const totals=lines.reduce((x,l)=>({debit:x.debit+Math.round(l.debit*100),credit:x.credit+Math.round(l.credit*100)}),{debit:0,credit:0});
+ const change=(index:number,patch:Partial<Line>)=>setLines(old=>old.map((x,i)=>i===index?{...x,...patch}:x));
+ const submit=()=>{try{if(!date||!memo.trim())throw new Error('Complete la fecha y la glosa.');const entry:Entry={id:`MAN-${crypto.randomUUID()}`,date,type:'Manual',memo:memo.trim(),reference:reference.trim(),lines:lines.filter(x=>x.debit||x.credit)};validateEntry(entry);save(entry)}catch(e){setError(e instanceof Error?e.message:'No se pudo guardar el asiento.')}};
+ return <div className="overlay"><div className="modal"><div className="modalhead"><h2>Asiento contable manual</h2><button onClick={close} aria-label="Cerrar">✕</button></div><div className="form modalform"><div className="two"><label>Fecha<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Referencia<input value={reference} onChange={e=>setReference(e.target.value)}/></label></div><label>Glosa<input value={memo} onChange={e=>setMemo(e.target.value)}/></label><div className="tablewrap"><table><thead><tr><th>Cuenta</th><th>Debe</th><th>Haber</th><th></th></tr></thead><tbody>{lines.map((row,i)=><tr key={i}><td><select aria-label={`Cuenta ${i+1}`} value={row.account} onChange={e=>{const a=accounts.find(x=>x.code===e.target.value);if(a)change(i,{account:a.code,name:a.name})}}>{accounts.map(a=><option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}</select></td><td><input aria-label={`Debe ${i+1}`} type="number" min="0" step="0.01" value={row.debit} onChange={e=>change(i,{debit:Number(e.target.value)})}/></td><td><input aria-label={`Haber ${i+1}`} type="number" min="0" step="0.01" value={row.credit} onChange={e=>change(i,{credit:Number(e.target.value)})}/></td><td><button onClick={()=>setLines(old=>old.filter((_,j)=>i!==j))}>Quitar</button></td></tr>)}</tbody></table></div><p>Debe: {format(totals.debit/100)} · Haber: {format(totals.credit/100)} · Diferencia: {format((totals.debit-totals.credit)/100)}</p>{error&&<p role="alert" className="warning">{error}</p>}<div className="modalactions"><button onClick={()=>setLines(old=>[...old,initial(accounts[0])])}>Añadir fila</button><button className="primary" onClick={submit}>Contabilizar</button></div></div></div></div>;
+}
+
+export function CashLedger({entries}:{entries:Entry[]}) {
+ const movements=entries.flatMap(e=>e.lines.filter(l=>l.account==='10'||l.account.startsWith('101')).map((line,i)=>({entry:e,line,key:e.id+'-'+i}))).sort((a,b)=>a.entry.date.localeCompare(b.entry.date)||a.entry.id.localeCompare(b.entry.id));
+ let balance=0;
+ return <><div className="title"><div><h1>Libro de caja</h1><p>Consulta de movimientos de las cuentas 10 y 101 desde el Libro Diario.</p></div></div><div className="card tablewrap"><table><thead><tr><th>Fecha</th><th>Documento</th><th>Concepto</th><th>Cuenta</th><th>Ingreso</th><th>Egreso</th><th>Saldo</th></tr></thead><tbody>{movements.map(({entry,line,key})=>{balance+=Math.round(line.debit*100)-Math.round(line.credit*100);return <tr key={key}><td>{entry.date.split('-').reverse().join('/')}</td><td>{entry.reference||entry.id}</td><td>{entry.memo}</td><td>{line.account}</td><td>{format(line.debit)}</td><td>{format(line.credit)}</td><td>{format(balance/100)}</td></tr>})}{!movements.length&&<tr><td colSpan={7} className="empty">Sin movimientos.</td></tr>}</tbody></table><p className="hint">La cuenta general 10 puede incluir bancos; este reporte no sustituye la separación de cajas y cuentas bancarias.</p></div></>;
+}
+
+export function OpeningBalance({accounts,entries,save}:{accounts:Account[];entries:Entry[];save:(entry:Entry)=>boolean}) {
   const [date,setDate]=useState(dateString());
   const [rows,setRows]=useState<Line[]>([{account:'10',name:'Efectivo y equivalentes de efectivo',debit:0,credit:0},{account:'50',name:'Capital',debit:0,credit:0}]);
   const [error,setError]=useState('');
@@ -18,7 +40,7 @@ export function OpeningBalance({accounts,entries,save}:{accounts:Account[];entri
     try {
       const active=rows.filter(x=>x.debit!==0||x.credit!==0);
       const entry:Entry={id:`APE-${crypto.randomUUID()}`,date,type:'Apertura',memo:'Asiento de apertura',lines:active};
-      validateOpening(entry,entries); save(entry); setError('Asiento de apertura registrado.');
+      validateOpening(entry,entries); if(save(entry)) setError('Asiento de apertura registrado.');
     } catch(e) {setError(e instanceof Error?e.message:'No se pudo registrar.');}
   };
   return <><div className="title"><div><h1>Balance inicial</h1><p>Registre saldos de apertura. Los importes deben cuadrar antes de contabilizar.</p></div></div><div className="card"><div className="form"><label>Fecha de apertura<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label></div><div className="tablewrap"><table><thead><tr><th>Cuenta</th><th>Debe</th><th>Haber</th><th></th></tr></thead><tbody>{rows.map((row,i)=><tr key={i}><td><select aria-label={`Cuenta ${i+1}`} value={row.account} onChange={e=>{const a=accounts.find(a=>a.code===e.target.value);if(a)update(i,{account:a.code,name:a.name})}}>{accounts.filter(a=>['1','2','3','4','5'].includes(a.code[0])).map(a=><option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}</select></td><td><input aria-label={`Debe ${i+1}`} type="number" min="0" step="0.01" value={row.debit} onChange={e=>update(i,{debit:Number(e.target.value)})}/></td><td><input aria-label={`Haber ${i+1}`} type="number" min="0" step="0.01" value={row.credit} onChange={e=>update(i,{credit:Number(e.target.value)})}/></td><td><button onClick={()=>setRows(old=>old.filter((_,j)=>i!==j))}>Quitar</button></td></tr>)}</tbody></table></div><p>Debe: <b>{format(total.debit/100)}</b> · Haber: <b>{format(total.credit/100)}</b> · Diferencia: <b>{format((total.debit-total.credit)/100)}</b></p><div className="modalactions"><button onClick={()=>setRows(old=>[...old,{account:'10',name:'Efectivo y equivalentes de efectivo',debit:0,credit:0}])}>Añadir fila</button><button className="primary" onClick={submit}>Registrar apertura</button></div>{error&&<p role="status">{error}</p>}<p className="hint">La apertura solo registra el asiento contable; no crea existencias ni cuentas bancarias. No utilice esta versión para contabilidad real.</p></div></>;

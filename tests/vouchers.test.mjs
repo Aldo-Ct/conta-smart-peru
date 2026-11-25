@@ -40,3 +40,14 @@ test('la validación protege nuevas ventas sin bloquear las facturas históricas
  assert.throws(()=>validateTransition({docs:[historical]},{docs:[historical,{...historical,id:'nueva',invoiceNumber:'F001-2'}]},'admin'),/RUC de 11/);
  assert.throws(()=>validateTransition({docs:[historical]},{docs:[{...historical,document:'87654321'}]},'admin'),/RUC de 11/);
 });
+
+test('recibo de servicios públicos controla RUC, servicio y crédito fiscal',()=>{
+ const receipt={...doc,voucherType:'Recibo de servicios públicos'};
+ assert.equal(validateVoucher(receipt,service),true);
+ assert.throws(()=>validateVoucher({...receipt,document:'12345678'},service),/RUC/);
+ assert.throws(()=>validateVoucher(receipt,goods),/servicio/);
+ assert.throws(()=>validateVoucher({...receipt,kind:'Venta'},service),/compras/);
+ assert.throws(()=>validateVoucher({...receipt,taxCreditEligible:undefined},service),/crédito fiscal/);
+ assert.equal(entryFromDoc(receipt,service)[0].lines[1].debit,180);
+ assert.equal(entryFromDoc({...receipt,taxCreditEligible:false},service)[0].lines[0].debit,1180);
+});

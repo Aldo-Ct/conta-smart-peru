@@ -21,3 +21,12 @@ test('fusionar catálogo conserva las cuentas existentes e incorpora solo códig
  const edited=editAccount(merged,'101',{name:'Caja principal',nature:'Deudora'});
  assert.equal(edited[1].code,'101');assert.equal(edited[1].sourceName,'Caja');assert.equal(merged[1].name,'Caja');
 });
+test('se pueden editar cuentas referenciales y personalizadas sin alterar códigos',()=>{
+ const accounts=addCustomAccount(official,{code:'101',name:'Caja',nature:'Deudora'});
+ const changed=editAccount(editAccount(accounts,'10',{name:'Efectivo y bancos',nature:'Deudora'}),'101',{name:'Caja principal',nature:'Acreedora'});
+ assert.equal(changed[0].name,'Efectivo y bancos');
+ assert.equal(changed[1].name,'Caja principal');
+ assert.deepEqual(changed.map(x=>x.code),['10','101']);
+ assert.equal(accounts[0].name,'Efectivo');
+ assert.throws(()=>editAccount(accounts,'10',{name:' ',nature:'Deudora'}),/denominación/);
+});

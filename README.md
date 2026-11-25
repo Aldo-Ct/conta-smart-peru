@@ -1,6 +1,6 @@
 # CONTA SMART PERÚ
 
-> Prototipo académico incompleto. No usar para contabilidad real, comprobantes electrónicos o declaraciones tributarias. Esta rama no ha sido desplegada a producción.
+> Prototipo académico incompleto. No usar para contabilidad real, comprobantes electrónicos o declaraciones tributarias.
 
 ## Estado de esta rama de mejora
 

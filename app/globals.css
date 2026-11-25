@@ -17,3 +17,5 @@
 .login-card h1{font-size:26px;margin:0}.login-card h1 span{color:#159a6e}.login-card h2,.login-card p{margin:0}.login-card p{line-height:1.5}.login-card label{display:grid;gap:6px;font-weight:600}.login-card input{width:100%;padding:12px;border:1px solid #ccd7e5;border-radius:8px;font-size:16px}.login-card button{padding:12px}
 
 .demo-notice{padding:14px 20px;margin-bottom:16px;background:#dbeafe;color:#153c77;border:1px solid #8ab8ee;border-radius:8px}
+
+.system-info{position:relative}.system-info summary{cursor:pointer;list-style:none;color:#64748b;font-size:22px}.system-info summary::-webkit-details-marker{display:none}.system-info-panel{position:absolute;right:0;top:38px;width:min(330px,80vw);z-index:20;padding:16px;background:var(--card);color:var(--text);border:1px solid #dbe4ef;border-radius:10px;box-shadow:0 8px 24px #14243d24;font-size:14px;line-height:1.45}.system-info-panel p{margin:8px 0 0}

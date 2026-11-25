@@ -14,10 +14,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Prepare production dependencies
-        run: npm ci --omit=dev
+      - name: Prepare database driver
+        run: npm install --prefix "$RUNNER_TEMP/conta-runtime" --no-save --no-package-lock --ignore-scripts --omit=dev --no-audit --no-fund pg@8.23.1
       - name: Package application
-        run: zip -qr deploy.zip out server.js lib node_modules
+        run: |
+          zip -qr deploy.zip out server.js lib
+          cd "$RUNNER_TEMP/conta-runtime"
+          zip -qr "$GITHUB_WORKSPACE/deploy.zip" node_modules
       - uses: azure/webapps-deploy@v3
         with:
           app-name: aldoct

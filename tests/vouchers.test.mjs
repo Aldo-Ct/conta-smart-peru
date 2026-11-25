@@ -25,3 +25,18 @@ test('detecta duplicados por serie normalizada y proveedor, sin confundir provee
  assert.equal(findDuplicateVoucher({...doc,id:'new',invoiceNumber:'F001-123',document:'20100070970'},[old]),null);
  assert.ok(findDuplicateVoucher({...doc,id:'new',kind:'Venta',invoiceNumber:'F001-123',document:'20100070970'},[{...old,kind:'Venta'}]));
 });
+
+test('las facturas de venta ordinarias nuevas requieren RUC; boletas admiten DNI',async()=>{
+ const {validateSaleInvoiceIdentity}=await import('../lib/vouchers.mjs');
+ const sale={kind:'Venta',voucherType:'Factura',document:'12345678'};
+ assert.throws(()=>validateSaleInvoiceIdentity(sale),/RUC de 11/);
+ assert.equal(validateSaleInvoiceIdentity({...sale,document:'20100070970'}),true);
+ assert.equal(validateSaleInvoiceIdentity({...sale,voucherType:'Boleta'}),true);
+});
+test('la validación protege nuevas ventas sin bloquear las facturas históricas',async()=>{
+ const {validateTransition}=await import('../lib/postgres/validate-transition.mjs');
+ const historical={id:'historico',kind:'Venta',voucherType:'Factura',document:'12345678',invoiceNumber:'F001-1'};
+ assert.doesNotThrow(()=>validateTransition({docs:[historical]},{docs:[historical]},'admin'));
+ assert.throws(()=>validateTransition({docs:[historical]},{docs:[historical,{...historical,id:'nueva',invoiceNumber:'F001-2'}]},'admin'),/RUC de 11/);
+ assert.throws(()=>validateTransition({docs:[historical]},{docs:[{...historical,document:'87654321'}]},'admin'),/RUC de 11/);
+});

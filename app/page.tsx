@@ -11,6 +11,7 @@ import ChartOfAccounts from "./ChartOfAccounts";
 import DocumentLookup from "./DocumentLookup";
 import CloudBackup from "./CloudBackup";
 import {useCloudSync} from "./useCloudSync";
+import LoginGate from "./LoginGate";
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, BookOpen, Building2, ChevronRight, CircleDollarSign, Download, LayoutDashboard, Menu, Moon, Package, Plus, ShoppingBag, Sun, Users, X } from "lucide-react";
 
@@ -33,7 +34,8 @@ function entryFromDoc(d:Doc, product?:Product):Entry[]{ const receivable=d.kind=
  if(d.kind==="Compra"&&product?.type==="Mercadería")arr.push({id:`DES-${d.id}`,date:d.date,type:"Destino",memo:`Destino de ${product.name} · ${d.party}`,reference:d.id,lines:[{account:"20",name:"Mercaderías",debit:d.base,credit:0},{account:"61",name:"Variación de existencias",debit:0,credit:d.base}]});
  if(d.kind==="Venta"&&product?.type==="Mercadería")arr.push({id:`COS-${d.id}`,date:d.date,type:"Costo de venta",memo:`Costo de ${product.name} · ${d.party}`,reference:d.id,lines:[{account:"69",name:"Costo de ventas",debit:n(product.cost*d.qty),credit:0},{account:"20",name:"Mercaderías",debit:0,credit:n(product.cost*d.qty)}]});
  arr.forEach(validateEntry); return arr; }
-export default function App(){
+export default function App(){return <LoginGate><MainApp/></LoginGate>}
+function MainApp(){
  const [data,setData]=useState<AppData>(initial),[ready,setReady]=useState(false),[page,setPage]=useState("Dashboard"),[open,setOpen]=useState(false),[modal,setModal]=useState<"doc"|"product"|"entry"|null>(null),[notice,setNotice]=useState("");
  useEffect(()=>{const saved=localStorage.getItem("conta-smart-v1");if(saved){const previous=JSON.parse(saved);setData({...previous,accounts:mergeReferenceChart(previous.accounts||[],pcge2010)});}setReady(true)},[]);useEffect(()=>{if(ready)localStorage.setItem("conta-smart-v1",JSON.stringify(data))},[data,ready]);
  const cloud=useCloudSync(data,ready,setData);

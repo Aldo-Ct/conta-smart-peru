@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 
 type User={username:string;role:'admin'|'accountant'|'viewer'};
 type Snapshot={revision:number;data:unknown};
@@ -9,6 +9,7 @@ async function request(url:string,options?:RequestInit){
 }
 export default function CloudBackup({snapshot,restore}:{snapshot:unknown;restore:(data:unknown)=>void}){
  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[user,setUser]=useState<User|null>(null),[remote,setRemote]=useState<Snapshot|null>(null),[checked,setChecked]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ useEffect(()=>{let live=true;void (async()=>{try{const session=await request('/api/conta/session');const data=await request('/api/conta/data');if(live){setUser(session.user);setRemote(data.snapshot);setChecked(true)}}catch{}})();return()=>{live=false}},[]);
  async function login(){setBusy(true);setMessage('');try{await request('/api/conta/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});setPassword('');const session=await request('/api/conta/session');setUser(session.user);window.dispatchEvent(new Event('conta-session-changed'));const data=await request('/api/conta/data');setRemote(data.snapshot);setChecked(true);setMessage('Sesión iniciada. Los datos locales permanecen en este navegador.');}catch(e){setMessage(e instanceof Error?e.message:'No se pudo iniciar sesión.')}finally{setBusy(false)}}
  async function refresh(){setBusy(true);try{const data=await request('/api/conta/data');setRemote(data.snapshot);setChecked(true);setMessage('Estado del respaldo actualizado.')}catch(e){setMessage(e instanceof Error?e.message:'No se pudo consultar el respaldo.')}finally{setBusy(false)}}
  async function save(){if(!checked||!user||user.role==='viewer')return;if(remote&&!confirm('Ya existe un respaldo en Azure. ¿Reemplazarlo con la información de este navegador?'))return;setBusy(true);try{const data=await request('/api/conta/data',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:remote?.revision||0,data:snapshot})});setRemote({revision:data.revision,data:snapshot});setMessage('Respaldo guardado en Azure. Los cambios posteriores requieren volver a guardar.')}catch(e){setMessage(e instanceof Error?e.message:'No se pudo guardar.')}finally{setBusy(false)}}

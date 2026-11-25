@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createSettlement,remainingBalance} from '../lib/settlements.mjs';
+const doc={id:'F01',date:'2026-01-10',kind:'Venta',party:'Cliente',total:1180,payment:'Crédito',status:'Contabilizado'};
+test('cobranza parcial y total se reflejan en saldo y asientos',()=>{
+ const first=createSettlement(doc,[],{id:'C1',date:'2026-01-11',amount:400});
+ assert.equal(remainingBalance(doc,[first.settlement]),780);
+ assert.deepEqual(first.entry.lines.map(l=>[l.account,l.debit,l.credit]),[['10',400,0],['12',0,400]]);
+ const second=createSettlement(doc,[first.settlement],{id:'C2',date:'2026-01-12',amount:780});
+ assert.equal(remainingBalance(doc,[first.settlement,second.settlement]),0);
+});
+test('pago de proveedor y protección ante errores',()=>{
+ const purchase={...doc,kind:'Compra'};
+ const payment=createSettlement(purchase,[],{id:'P1',date:'2026-01-11',amount:100});
+ assert.deepEqual(payment.entry.lines.map(l=>[l.account,l.debit,l.credit]),[['42',100,0],['10',0,100]]);
+ assert.throws(()=>createSettlement(doc,[payment.settlement],{id:'P1',date:'2026-01-11',amount:10}),/ya fue/);
+ assert.throws(()=>createSettlement(doc,[],{id:'P2',date:'2026-01-09',amount:10}),/fecha/);
+ assert.throws(()=>createSettlement(doc,[],{id:'P2',date:'2026-01-11',amount:1180.01}),/supera/);
+ assert.throws(()=>createSettlement(doc,[],{id:'P2',date:'2026-01-11',amount:1.001}),/decimales/);
+});

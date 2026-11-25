@@ -49,6 +49,6 @@ export function useCloudSync<T>(data:T,ready:boolean,setData:(value:T)=>void,sto
   }catch{setStatus('offline');}
  },[ready,flush]);
  useEffect(()=>{if(!ready)return;void connect();const onSession=()=>void connect();window.addEventListener('conta-session-changed',onSession);window.addEventListener('online',onSession);const retry=setInterval(()=>{if(statusRef.current==='offline')void connect()},30000);return()=>{active.current=false;window.removeEventListener('conta-session-changed',onSession);window.removeEventListener('online',onSession);clearInterval(retry);if(timer.current)clearTimeout(timer.current);};},[ready,connect]);
- useEffect(()=>{if(ready&&statusRef.current==='invalid'){void connect();return;}if(!ready||!active.current)return;if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void flush(),700);return()=>{if(timer.current)clearTimeout(timer.current);};},[data,ready,flush,connect]);
+ useEffect(()=>{if(ready&&statusRef.current==='invalid'){void connect();return;}if(!ready||!active.current)return;if(timer.current)clearTimeout(timer.current);if(stable(latest.current)!==last.current)setStatus('saving');timer.current=setTimeout(()=>void flush(),700);return()=>{if(timer.current)clearTimeout(timer.current);};},[data,ready,flush,connect]);
  return {status,error,reconnect:connect};
 }

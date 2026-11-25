@@ -35,3 +35,7 @@ test('corrige solo el céntimo de IGV asociado a un documento y conserva el orig
  assert.equal(repairDocumentRounding([doc],[entry],['2026-11']).changes.length,0);
  assert.equal(repairDocumentRounding([{...doc,igv:195.27}],[entry]).changes.length,0);
 });
+test('rechaza fracciones de céntimo y fechas imposibles',()=>{
+ assert.throws(()=>validateEntry({lines:[line('10',1.001,0),line('50',0,1.001)]}),/decimales/);
+ assert.throws(()=>validateOpening({date:'2026-02-30',lines:[line('10',10,0),line('50',0,10)]},[]),/fecha válida/);
+});

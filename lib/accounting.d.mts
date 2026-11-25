@@ -7,3 +7,4 @@ export function validateOpening(entry:AccountingEntry & {date:string}, existing:
 export function accountBalances(entries:AccountingEntry[]):{code:string;name:string;debit:number;credit:number;balance:number}[];
 export function incomeStatement(entries:AccountingEntry[]):{sales:number;cost:number;gross:number;operating:number;other:number;net:number};
 export function position(entries:AccountingEntry[]):{assets:number;liabilities:number;equity:number;result:number;difference:number};
+export function repairDocumentRounding<T extends {id:string;date:string;status:string;tax:string;included:boolean;kind:string;base:number;igv:number;total:number}, E extends AccountingEntry & {id:string;type:string;reference?:string}>(documents:T[],entries:E[],closedPeriods?:string[]):{documents:T[];entries:E[];changes:{entryId:string;documentId:string;entry:E;previousIgv:number;correctedIgv:number}[]};

@@ -23,5 +23,5 @@ export default function DocumentLookup({onFound,onChange}:{onFound:(name:string)
     },600);
     return ()=>{clearTimeout(timer);controller.abort();};
   },[value]);
-  return <label>DNI o RUC<input inputMode="numeric" maxLength={11} value={value} placeholder="8 dígitos (DNI) o 11 (RUC)" onChange={e=>{const next=e.target.value.replace(/\D/g,'').slice(0,11);setValue(next);onChange(next)}}/><small aria-live="polite">{status || 'La búsqueda se inicia al completar el número.'}</small></label>;
+  return <label>DNI o RUC<input autoFocus autoComplete="off" inputMode="numeric" maxLength={11} value={value} placeholder="8 dígitos (DNI) o 11 (RUC)" onChange={e=>{const next=e.target.value.replace(/\D/g,'').slice(0,11);setValue(next);onChange(next)}}/><small aria-live="polite">{status || 'La búsqueda se inicia al completar el número.'}</small></label>;
 }

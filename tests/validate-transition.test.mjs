@@ -27,3 +27,11 @@ test('el servidor impide crear otro registro con código ya existente',()=>{
  const account={code:'10',name:'Efectivo',nature:'Deudora',official:true},old={accounts:[account],docs:[],entries:[]};
  assert.throws(()=>validateTransition(old,{...old,accounts:[account,{...account,official:false}]},'admin'),/código/);
 });
+
+test('el servidor solo permite borrar cuentas personalizadas sin referencias',()=>{
+ const official={code:'10',name:'Efectivo',nature:'Deudora',official:true},custom={code:'101',name:'Personalizada',nature:'Deudora',official:false};
+ const before={accounts:[official,custom],entries:[],docs:[]};
+ assert.doesNotThrow(()=>validateTransition(before,{...before,accounts:[official]},'admin'));
+ assert.throws(()=>validateTransition(before,{...before,accounts:[custom]},'admin'),/personalizadas/);
+ const entry={id:'a',lines:[{account:'101'}]};assert.throws(()=>validateTransition({...before,entries:[entry]},{...before,entries:[entry],accounts:[official]},'admin'),/asientos/);
+});

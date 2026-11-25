@@ -36,3 +36,13 @@ test('no duplica denominaciones normalizadas dentro de la misma cuenta superior'
  assert.equal(addCustomAccount(base,{code:'1021',name:'Caja chica',nature:'Deudora'}).at(-1).code,'1021');
  assert.throws(()=>addCustomAccount(base.map(x=>x.code==='102'?{...x,active:false}:x),{code:'1021',name:'Nuevo',nature:'Deudora'}),/activa/);
 });
+
+test('elimina solo cuentas personalizadas sin asientos ni subcuentas',async()=>{
+ const {deleteCustomAccount}=await import('../lib/chart.mjs');
+ const base=[{code:'10',name:'Efectivo',nature:'Deudora',official:true},{code:'101',name:'Caja local',nature:'Deudora',official:false},{code:'1011',name:'Subcuenta',nature:'Deudora',official:false}];
+ assert.throws(()=>deleteCustomAccount(base,'10'),/personalizadas/);
+ assert.throws(()=>deleteCustomAccount(base,'101'),/subcuentas/);
+ assert.throws(()=>deleteCustomAccount(base,'1011',[{lines:[{account:'1011'}]}]),/asientos/);
+ assert.throws(()=>deleteCustomAccount(base,'1011',[],[{accountCode:'1011'}]),/banco/);
+ assert.equal(deleteCustomAccount(base,'1011').some(a=>a.code==='1011'),false);
+});

@@ -3,3 +3,4 @@ export function addCustomAccount(accounts:ChartAccount[],input:{code:string;name
 export function setAccountActive(accounts:ChartAccount[],code:string,active:boolean):ChartAccount[];
 export function mergeReferenceChart(existing:ChartAccount[],reference:{code:string;name:string}[]):ChartAccount[];
 export function editAccount(accounts:ChartAccount[],code:string,input:{name:string;nature:string}):ChartAccount[];
+export function deleteCustomAccount(accounts:ChartAccount[],code:string,entries?:{lines:{account:string}[]}[],banks?:{accountCode:string}[]):ChartAccount[];

@@ -41,7 +41,8 @@ export function useCloudSync<T>(data:T,ready:boolean,setData:(value:T)=>void,sto
    if(!cloud){revision.current=0;last.current='';active.current=true;void flush();return;}
    const cloudFingerprint=stable(cloud.data),localFingerprint=stable(latest.current);
    let knownRevision=0;try{const marker=JSON.parse(localStorage.getItem('conta-smart-cloud-revision')||'null');if(marker?.username===user.username)knownRevision=Number(marker.revision)||0;}catch{}
-   const decision=decideSync({hasLocal:hadLocal.current===true,localFingerprint,cloudFingerprint,knownRevision,cloudRevision:cloud.revision});
+   const resetRevision=Number((cloud.data as {systemResetRevision?:number}).systemResetRevision)||0;
+   const decision=resetRevision>knownRevision?'load-cloud':decideSync({hasLocal:hadLocal.current===true,localFingerprint,cloudFingerprint,knownRevision,cloudRevision:cloud.revision});
    if(decision==='load-cloud'){setDataRef.current(cloud.data as T);latest.current=cloud.data as T;hadLocal.current=true;}
    else if(decision==='conflict'){setStatus('conflict');return;}
    revision.current=cloud.revision;last.current=cloudFingerprint;localStorage.setItem('conta-smart-cloud-revision',JSON.stringify({username:user.username,revision:cloud.revision}));active.current=true;setStatus('synced');

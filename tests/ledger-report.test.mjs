@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {ledgerForPeriod} from '../lib/ledger-report.mjs';
+const entries=[{id:'a',date:'2026-10-01',lines:[{account:'10',debit:100,credit:0}]},{id:'b',date:'2026-11-02',lines:[{account:'10',debit:0,credit:30}]},{id:'c',date:'2026-12-01',lines:[{account:'10',debit:10,credit:0}]}];
+test('Mayor conserva saldo previo, movimientos y saldo final del período',()=>{const r=ledgerForPeriod(entries,'10','2026-11-01','2026-11-30');assert.deepEqual([r.opening,r.debit,r.credit,r.closing],[10000,0,3000,7000]);assert.equal(r.rows.length,1);assert.equal(r.rows[0].balance,7000);});
+test('Mayor muestra saldo inicial aun sin movimientos y rechaza intervalo inverso',()=>{const r=ledgerForPeriod(entries,'10','2027-01-01','2027-01-31');assert.equal(r.rows.length,0);assert.equal(r.opening,8000);assert.equal(r.closing,8000);assert.throws(()=>ledgerForPeriod(entries,'10','2026-12-01','2026-10-01'),/fecha inicial/)});

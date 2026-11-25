@@ -18,3 +18,10 @@ test('recibo por honorarios sin retención usa cuenta 46 y rechaza IGV, mercader
 test('datos históricos sin tipo no se alteran y comprobantes nuevos necesitan identificación',()=>{
  assert.equal(validateVoucher({kind:'Compra',igv:0}),true);assert.throws(()=>validateVoucher({...doc,invoiceNumber:''},goods),/serie/);assert.throws(()=>validateVoucher({...doc,document:''},goods),/RUC/);assert.throws(()=>validateVoucher({...doc,tax:'Exonerado'},goods),/IGV/);
 });
+
+test('detecta duplicados por serie normalizada y proveedor, sin confundir proveedores distintos',async()=>{
+ const {findDuplicateVoucher}=await import('../lib/vouchers.mjs');const old={...doc,id:'old',invoiceNumber:'f001-000123'};
+ assert.equal(findDuplicateVoucher({...doc,id:'new',invoiceNumber:' F001-123 '},[old])?.id,'old');
+ assert.equal(findDuplicateVoucher({...doc,id:'new',invoiceNumber:'F001-123',document:'20100070970'},[old]),null);
+ assert.ok(findDuplicateVoucher({...doc,id:'new',kind:'Venta',invoiceNumber:'F001-123',document:'20100070970'},[{...old,kind:'Venta'}]));
+});

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from 'react';
 import { validateEntry, validateOpening } from '../lib/accounting.mjs';
+import { ledgerForPeriod } from '../lib/ledger-report.mjs';
 
 export type Line={account:string;name:string;debit:number;credit:number};
 export type Entry={id:string;date:string;type:string;memo:string;reference?:string;lines:Line[]};
@@ -47,12 +48,12 @@ export function OpeningBalance({accounts,entries,save}:{accounts:Account[];entri
 }
 
 export function GeneralLedger({entries}:{entries:Entry[]}) {
-  const codes=useMemo(()=>[...new Set(entries.flatMap(e=>e.lines.map(l=>l.account)))].sort(),[entries]);
-  const [selected,setSelected]=useState('');
-  const account=selected || codes[0] || '';
-  const movements=entries.flatMap(e=>e.lines.filter(l=>l.account===account).map((l,i)=>({entry:e,line:l,key:e.id+'-'+i}))).sort((a,b)=>a.entry.date.localeCompare(b.entry.date)||a.entry.id.localeCompare(b.entry.id));
-  let balance=0;
-  return <><div className="title"><div><h1>Libro Mayor</h1><p>Movimientos y saldo acumulado por cuenta.</p></div></div><div className="card"><div className="form"><label>Cuenta<select value={account} onChange={e=>setSelected(e.target.value)}>{codes.map(c=><option key={c} value={c}>{c} · {entries.flatMap(e=>e.lines).find(l=>l.account===c)?.name}</option>)}</select></label></div><div className="tablewrap"><table><thead><tr><th>Fecha</th><th>Asiento</th><th>Glosa</th><th>Debe</th><th>Haber</th><th>Saldo deudor / acreedor</th></tr></thead><tbody>{movements.map(({entry,line,key})=>{balance+=Math.round(line.debit*100)-Math.round(line.credit*100);return <tr key={key}><td>{entry.date.split('-').reverse().join('/')}</td><td>{entry.id}</td><td>{entry.memo}</td><td>{format(line.debit)}</td><td>{format(line.credit)}</td><td>{format(Math.abs(balance)/100)} {balance<0?'A':'D'}</td></tr>})}{!movements.length&&<tr><td colSpan={6} className="empty">Sin movimientos contabilizados.</td></tr>}</tbody></table></div></div></>;
+ const codes=useMemo(()=>[...new Set(entries.flatMap(e=>e.lines.map(l=>l.account)))].sort(),[entries]);
+ const [selected,setSelected]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState('');
+ const account=selected || codes[0] || '',invalid=!!from&&!!to&&from>to;
+ const report=invalid?null:ledgerForPeriod(entries,account,from,to);
+ const signed=(value:number)=>value===0?format(0):`${format(Math.abs(value)/100)} ${value<0?'A':'D'}`;
+ return <><div className="title"><div><h1>Libro Mayor</h1><p>Movimientos y saldos por cuenta y período.</p></div></div><div className="card"><div className="form"><label>Cuenta<select value={account} onChange={e=>setSelected(e.target.value)}>{codes.map(c=><option key={c} value={c}>{c} · {entries.flatMap(e=>e.lines).find(l=>l.account===c)?.name}</option>)}</select></label><div className="two"><label>Desde<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Hasta<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label></div></div>{invalid?<p className="warning" role="alert">La fecha inicial no puede ser posterior a la final.</p>:report&&<><p>Saldo inicial: <b>{signed(report.opening)}</b></p><div className="tablewrap"><table><thead><tr><th>Fecha</th><th>Asiento</th><th>Referencia</th><th>Glosa</th><th>Debe</th><th>Haber</th><th>Saldo deudor / acreedor</th></tr></thead><tbody>{report.rows.map(({entry,line,index,balance})=><tr key={entry.id+'-'+index}><td>{entry.date.split('-').reverse().join('/')}</td><td>{entry.id}</td><td>{entry.reference||'—'}</td><td>{entry.memo}</td><td>{format(line.debit)}</td><td>{format(line.credit)}</td><td>{signed(balance)}</td></tr>)}{!report.rows.length&&<tr><td colSpan={7} className="empty">Sin movimientos en el período.</td></tr>}</tbody></table></div><p>Debe: <b>{format(report.debit/100)}</b> · Haber: <b>{format(report.credit/100)}</b> · Saldo final: <b>{signed(report.closing)}</b></p></>}</div></>;
 }
 
 export function CashCount({entries}:{entries:Entry[]}) {

@@ -18,3 +18,11 @@ test('pago de proveedor y protección ante errores',()=>{
  assert.throws(()=>createSettlement(doc,[],{id:'P2',date:'2026-01-11',amount:1180.01}),/supera/);
  assert.throws(()=>createSettlement(doc,[],{id:'P2',date:'2026-01-11',amount:1.001}),/decimales/);
 });
+test('pago total queda cancelado, genera asiento vinculado y rechaza fecha imposible',()=>{
+ const purchase={...doc,kind:'Compra',invoiceNumber:'F001-123'};
+ const paid=createSettlement(purchase,[],{id:'P-total',date:'2026-01-31',amount:1180});
+ assert.equal(remainingBalance(purchase,[paid.settlement]),0);
+ assert.equal(paid.entry.reference,purchase.id);assert.match(paid.entry.memo,/F001-123/);
+ assert.throws(()=>createSettlement(purchase,[],{id:'bad-date',date:'2026-02-30',amount:10}),/fecha válida/);
+ assert.throws(()=>createSettlement(purchase,[paid.settlement],{id:'over',date:'2026-02-01',amount:0.01}),/supera/);
+});

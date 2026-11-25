@@ -16,3 +16,14 @@ test('valida asiento y movimiento de inventario de una nueva compra',async()=>{
  const bad={...entries[0],lines:[{account:'10',debit:1,credit:0},{account:'50',debit:0,credit:1}]};assert.throws(()=>validateTransition({docs:[],entries:[]},{...next,entries:[bad,...entries.slice(1)]},'admin'),/asiento no coincide/);
  assert.throws(()=>validateTransition({docs:[],entries:[]},{...next,inventoryMovements:[{...movement,quantity:2}]},'admin'),/inventario/);
 });
+
+test('el servidor rechaza subcuentas nuevas duplicadas sin bloquear las anteriores',()=>{
+ const root={code:'10',name:'Efectivo',nature:'Deudora',official:true},a={code:'101',name:'Caja chica',nature:'Deudora',official:false};
+ const old={accounts:[root,a],docs:[],entries:[]};assert.doesNotThrow(()=>validateTransition(old,old,'admin'));
+ const duplicate={code:'102',name:'CAJA CHICA',nature:'Deudora',official:false};assert.throws(()=>validateTransition(old,{...old,accounts:[...old.accounts,duplicate]},'admin'),/denominación/);
+ const other={...duplicate,name:'Cuenta operativa'};assert.doesNotThrow(()=>validateTransition(old,{...old,accounts:[...old.accounts,other]},'admin'));
+});
+test('el servidor impide crear otro registro con código ya existente',()=>{
+ const account={code:'10',name:'Efectivo',nature:'Deudora',official:true},old={accounts:[account],docs:[],entries:[]};
+ assert.throws(()=>validateTransition(old,{...old,accounts:[account,{...account,official:false}]},'admin'),/código/);
+});

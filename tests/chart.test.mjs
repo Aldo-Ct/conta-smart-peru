@@ -30,3 +30,9 @@ test('se pueden editar cuentas referenciales y personalizadas sin alterar códig
  assert.equal(accounts[0].name,'Efectivo');
  assert.throws(()=>editAccount(accounts,'10',{name:' ',nature:'Deudora'}),/denominación/);
 });
+test('no duplica denominaciones normalizadas dentro de la misma cuenta superior',()=>{
+ const base=[...official,{code:'101',name:'Caja chica',nature:'Deudora',official:false},{code:'102',name:'Fondos',nature:'Deudora',official:true}];
+ assert.throws(()=>addCustomAccount(base,{code:'103',name:'  CÁJA   chica ',nature:'Deudora'}),/denominación/);
+ assert.equal(addCustomAccount(base,{code:'1021',name:'Caja chica',nature:'Deudora'}).at(-1).code,'1021');
+ assert.throws(()=>addCustomAccount(base.map(x=>x.code==='102'?{...x,active:false}:x),{code:'1021',name:'Nuevo',nature:'Deudora'}),/activa/);
+});

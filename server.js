@@ -4,9 +4,18 @@ const path = require('path');
 const root = path.join(__dirname, 'out');
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.txt':'text/plain; charset=utf-8'};
 const requests = new Map();
+let contaApi;
+if (process.env.CONTA_DB_ENABLED === 'true') {
+  const ready=Promise.all([import('./lib/postgres/connection.mjs'),import('./lib/postgres/auth.mjs'),import('./lib/postgres/snapshots.mjs'),import('./lib/postgres/http-api.mjs')]).then(([connection,authentication,snapshots,httpApi])=>{
+    const pool=connection.createContaPool({host:process.env.CONTA_DB_HOST,user:process.env.CONTA_DB_USER,password:process.env.CONTA_DB_PASSWORD,database:'conta_smart'});
+    return httpApi.createContaApi({auth:new authentication.PostgresAuth(pool),store:new snapshots.SnapshotStore(pool),allowedOrigins:['https://www.aldoct.tech','https://aldoct.tech']});
+  });
+  contaApi=async(req,res)=>{try{return await (await ready)(req,res);}catch{res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'Servicio de datos no disponible.'}));}};
+}
 http.createServer(async (req,res)=>{
   let pathname;
   try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); } catch { res.writeHead(400).end(); return; }
+  if (pathname.startsWith('/api/conta/')) { if(contaApi)return contaApi(req,res);res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'El almacenamiento central aún no está habilitado.'}));return; }
   if (pathname === '/api/documento') {
     const doc = new URL(req.url, 'http://localhost').searchParams.get('numero') || '';
     const type = /^\d{8}$/.test(doc) ? 'dni' : /^\d{11}$/.test(doc) ? 'ruc' : null;

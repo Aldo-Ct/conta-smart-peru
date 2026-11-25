@@ -14,8 +14,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Package static site
-        run: zip -qr deploy.zip out server.js
+      - name: Prepare production dependencies
+        run: npm ci --omit=dev
+      - name: Package application
+        run: zip -qr deploy.zip out server.js lib node_modules
       - uses: azure/webapps-deploy@v3
         with:
           app-name: aldoct

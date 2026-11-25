@@ -8,7 +8,7 @@ El motor de consulta y validación se encuentra en `lib/accounting.mjs`. El esta
 
 ### Base de datos en desarrollo
 
-`lib/ledger-db.mjs` contiene una base SQLite independiente para asientos, cuentas, periodos, usuarios, sesiones y auditoría. Usa transacciones, verifica el cuadre y evita operaciones y reversiones duplicadas. Los tests comprueban persistencia en disco, reversión, periodos cerrados, contraseña con scrypt y vencimiento de sesiones. Requiere Node.js 22.13 o superior; `node:sqlite` es experimental en Node 22. **Todavía no está conectada a la interfaz ni al servidor web.** No existe migración de los datos del navegador, sistema de inicio de sesión web, validación de permisos en rutas ni respaldo automatizado de la base; no se debe desplegar ni usar esta base con datos reales hasta completar y verificar esos componentes. La web publicada continúa utilizando `localStorage`.
+`lib/ledger-db.mjs` contiene una base SQLite independiente para asientos, cuentas, periodos, usuarios, sesiones y auditoría. Usa transacciones, verifica el cuadre y evita operaciones y reversiones duplicadas. Los tests comprueban persistencia en disco, reversión, periodos cerrados, contraseña con scrypt y vencimiento de sesiones. Requiere Node.js 22.13 o superior; `node:sqlite` es experimental en Node 22. **Todavía no está conectada a la interfaz ni al servidor web.** `lib/ledger-service.mjs` agrega comprobaciones de sesión, rol y aislamiento de empresa para operaciones del diario y periodos; sus pruebas son locales y tampoco está conectado a la web ni a PostgreSQL. No existe migración de los datos del navegador, sistema de inicio de sesión web, validación de permisos en rutas ni respaldo automatizado de la base; no se debe desplegar ni usar esta base con datos reales hasta completar y verificar esos componentes. La web publicada continúa utilizando `localStorage`.
 
 Pruebas: `npm test`. Incluyen la venta de S/ 1,180 con IGV incluido y costo de S/ 600, rechazo de asientos descuadrados y destino de mercadería.
 
@@ -53,3 +53,9 @@ La interfaz principal está implementada en `app/page.tsx`; el modelo de documen
 ## PCGE y limitaciones
 
 Incluye el catálogo de referencia del documento de 2010 y cuentas personalizadas. Esta versión no es un sistema homologado por SUNAT ni genera PLE/SIRE; sus reportes son internos. La consulta de DNI/RUC usa un proveedor externo y requiere `APIPERU_TOKEN` en el servidor. Una implementación empresarial debe incorporar base de datos, autenticación, permisos, auditoría y exportaciones.
+
+El directorio `lib/postgres` prepara el esquema y la configuración TLS para la base separada `conta_smart` en Azure. El esquema no se ha aplicado y la conexión aún no está integrada con el servidor o la interfaz; los datos publicados continúan en el navegador.
+
+`lib/postgres/auth.mjs` y `lib/postgres/snapshots.mjs` preparan sesiones y guardado con control de versiones y roles; sus pruebas usan respuestas simuladas, no una conexión PostgreSQL real. Aún faltan endpoints web, interfaz de acceso y migración protegida.
+
+La API en preparación (`lib/postgres/http-api.mjs`) aplica sesiones, roles, origen permitido y control de versiones; `validate-snapshot.mjs` rechaza asientos descuadrados y duplicados. No está integrada en `server.js`, no se ha aplicado el esquema y las pruebas de PostgreSQL usan dobles simulados. No utilizar con datos reales ni desplegar hasta implementar la interfaz, la migración, la validación completa y las pruebas contra PostgreSQL real.

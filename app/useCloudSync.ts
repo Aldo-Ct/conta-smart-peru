@@ -1,16 +1,17 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {decideSync} from '../lib/cloud-sync.mjs';
+import {readAccountData} from '../lib/local-account.mjs';
 
-type SyncStatus='checking'|'signedOut'|'synced'|'saving'|'offline'|'conflict';
+type SyncStatus='checking'|'signedOut'|'synced'|'saving'|'offline'|'conflict'|'invalid';
 function stable(value:unknown):string {
  if(Array.isArray(value))return '['+value.map(stable).join(',')+']';
  if(value&&typeof value==='object')return '{'+Object.entries(value as Record<string,unknown>).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>JSON.stringify(k)+':'+stable(v)).join(',')+'}';
  return JSON.stringify(value)??'null';
 }
-export function useCloudSync<T>(data:T,ready:boolean,setData:(value:T)=>void){
- const hadLocal=useRef<boolean|null>(null);if(hadLocal.current===null && typeof window!=='undefined')hadLocal.current=localStorage.getItem('conta-smart-v1')!==null;
- const [status,setStatus]=useState<SyncStatus>('checking');const statusRef=useRef(status);statusRef.current=status;
+export function useCloudSync<T>(data:T,ready:boolean,setData:(value:T)=>void,storageKey:string){
+ const hadLocal=useRef<boolean|null>(null);if(hadLocal.current===null && typeof window!=='undefined')hadLocal.current=readAccountData(localStorage,storageKey.slice('conta-smart-v2:'.length))!==null;
+ const [status,setStatus]=useState<SyncStatus>('checking'),[error,setError]=useState('');const statusRef=useRef(status);statusRef.current=status;
  const revision=useRef<number|null>(null),identity=useRef(''),last=useRef(''),latest=useRef(data),inflight=useRef(false),timer=useRef<ReturnType<typeof setTimeout>|null>(null),active=useRef(false),setDataRef=useRef(setData);
  latest.current=data;setDataRef.current=setData;
  const flush=useCallback(async()=>{
@@ -21,8 +22,9 @@ export function useCloudSync<T>(data:T,ready:boolean,setData:(value:T)=>void){
    const res=await fetch('/api/conta/data',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:revision.current,data:payload})});
    if(res.status===401){active.current=false;setStatus('signedOut');return;}
    if(res.status===409){active.current=false;setStatus('conflict');return;}
+   if(res.status===400){const body=await res.json().catch(()=>({}));setError(body.error||'Los datos no son válidos.');active.current=false;setStatus('invalid');return;}
    if(!res.ok){active.current=false;setStatus('offline');return;}
-   const body=await res.json();revision.current=body.revision;last.current=fingerprint;
+   const body=await res.json();revision.current=body.revision;last.current=fingerprint;setError('');
    localStorage.setItem('conta-smart-cloud-revision',JSON.stringify({username:identity.current,revision:body.revision}));setStatus('synced');
   }catch{active.current=false;setStatus('offline');}finally{inflight.current=false;}
   if(active.current&&stable(latest.current)!==last.current)void flush();
@@ -47,6 +49,6 @@ export function useCloudSync<T>(data:T,ready:boolean,setData:(value:T)=>void){
   }catch{setStatus('offline');}
  },[ready,flush]);
  useEffect(()=>{if(!ready)return;void connect();const onSession=()=>void connect();window.addEventListener('conta-session-changed',onSession);window.addEventListener('online',onSession);const retry=setInterval(()=>{if(statusRef.current==='offline')void connect()},30000);return()=>{active.current=false;window.removeEventListener('conta-session-changed',onSession);window.removeEventListener('online',onSession);clearInterval(retry);if(timer.current)clearTimeout(timer.current);};},[ready,connect]);
- useEffect(()=>{if(!ready||!active.current)return;if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void flush(),700);return()=>{if(timer.current)clearTimeout(timer.current);};},[data,ready,flush]);
- return {status,reconnect:connect};
+ useEffect(()=>{if(ready&&statusRef.current==='invalid'){void connect();return;}if(!ready||!active.current)return;if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void flush(),700);return()=>{if(timer.current)clearTimeout(timer.current);};},[data,ready,flush,connect]);
+ return {status,error,reconnect:connect};
 }

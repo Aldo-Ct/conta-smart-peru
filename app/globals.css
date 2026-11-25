@@ -19,3 +19,5 @@
 .demo-notice{padding:14px 20px;margin-bottom:16px;background:#dbeafe;color:#153c77;border:1px solid #8ab8ee;border-radius:8px}
 
 .system-info{position:relative}.system-info summary{cursor:pointer;list-style:none;color:#64748b;font-size:22px}.system-info summary::-webkit-details-marker{display:none}.system-info-panel{position:absolute;right:0;top:38px;width:min(330px,80vw);z-index:20;padding:16px;background:var(--card);color:var(--text);border:1px solid #dbe4ef;border-radius:10px;box-shadow:0 8px 24px #14243d24;font-size:14px;line-height:1.45}.system-info-panel p{margin:8px 0 0}
+
+.sync-warning{font-size:12px;color:#a34112;font-weight:700}

@@ -23,3 +23,10 @@
 .sync-warning{font-size:12px;color:#a34112;font-weight:700}
 
 .period-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;color:var(--muted);font-size:13px}.period-picker button,.period-picker input{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:7px;padding:8px 12px}.period-picker button.selected{border-color:var(--blue);color:var(--blue)}.monthly-chart{display:flex;gap:5px;align-items:end;height:200px;border-bottom:1px solid var(--line);margin-top:16px}.month-column{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted)}.month-column.current{background:#1769aa10;color:var(--blue);font-weight:bold}.month-bars{height:170px;width:100%;display:flex;align-items:end;justify-content:center;gap:3px}.month-bars i{display:block;background:#1685c2;width:35%;max-width:20px;border-radius:3px 3px 0 0}.month-bars i+i{background:#37b889}.month-column small{font-size:10px}
+
+/* Keep long account names and native controls within their form cards. */
+.form { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.form > *, .form label, .two > * { min-width: 0; }
+.form input, .form select, .form textarea { width: 100%; min-width: 0; max-width: 100%; }
+.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 520px) { .two { grid-template-columns: minmax(0, 1fr); } }

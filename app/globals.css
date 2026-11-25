@@ -5,3 +5,9 @@
 .modal { overscroll-behavior: contain; }
 .modal .modalhead { position: sticky; top: 0; z-index: 2; background: var(--card); }
 .modal .modalactions { position: sticky; bottom: 0; z-index: 1; background: var(--card); padding: 12px 0; }
+
+.chart-groups { display: grid; gap: 12px; }
+.chart-group { overflow: hidden; }
+.chart-group > summary { cursor: pointer; padding: 18px 20px; font-weight: 700; }
+.chart-group > summary small { float: right; font-weight: 400; color: var(--muted, #61718a); }
+.chart-group .tablewrap { overflow-x: auto; }

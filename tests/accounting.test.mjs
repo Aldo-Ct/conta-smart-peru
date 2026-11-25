@@ -25,3 +25,13 @@ test('apertura cuadrada y prevención de duplicados por ejercicio',()=>{
  assert.throws(()=>validateOpening({...entry,lines:[line('60',2000,0),line('50',0,2000)]},[]),/solo admite/);
  assert.equal(position([entry]).difference,0);
 });
+
+test('corrige solo el céntimo de IGV asociado a un documento y conserva el original',async()=>{
+ const {repairDocumentRounding}=await import('../lib/accounting.mjs');
+ const doc={id:'F',date:'2026-11-24',kind:'Venta',status:'Contabilizado',tax:'Gravado',included:true,total:1280,base:1084.75,igv:195.26};
+ const entry={id:'AS-F',type:'Venta',lines:[line('12',1280,0),line('40',0,195.26),line('70',0,1084.75)]};
+ const result=repairDocumentRounding([doc],[entry]);
+ assert.equal(result.documents[0].igv,195.25);assert.equal(result.entries[0].lines[1].credit,195.25);assert.equal(entry.lines[1].credit,195.26);validateEntry(result.entries[0]);
+ assert.equal(repairDocumentRounding([doc],[entry],['2026-11']).changes.length,0);
+ assert.equal(repairDocumentRounding([{...doc,igv:195.27}],[entry]).changes.length,0);
+});

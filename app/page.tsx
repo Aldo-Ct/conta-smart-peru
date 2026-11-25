@@ -5,6 +5,8 @@ import Kardex, { type InventoryMovement } from "./Kardex";
 import { moveInventory } from "../lib/inventory.mjs";
 import Settlements from "./Settlements";
 import { type Settlement } from "../lib/settlements.mjs";
+import pcge2010 from "../lib/pcge-2010.json";
+import {mergeReferenceChart, type ChartAccount} from "../lib/chart.mjs";
 import ChartOfAccounts from "./ChartOfAccounts";
 import DocumentLookup from "./DocumentLookup";
 import { useEffect, useMemo, useState } from "react";
@@ -14,14 +16,14 @@ type Line={account:string;name:string;debit:number;credit:number};
 type Entry={id:string;date:string;type:string;memo:string;reference?:string;lines:Line[]};
 type Product={inventoryValueCents?:number;id:string;code:string;name:string;type:"Mercadería"|"Servicio";stock:number;cost:number;price:number;min:number};
 type Doc={document?:string;id:string;kind:"Venta"|"Compra";date:string;party:string;payment:"Contado"|"Crédito";tax:"Gravado"|"Exonerado"|"Inafecto";included:boolean;amount:number;base:number;igv:number;total:number;productId?:string;qty:number;status:"Contabilizado"|"Borrador"|"Anulado"};
-type AppData={settlements?:Settlement[];inventoryMovements?:InventoryMovement[];closedPeriods?:string[];company:{name:string;ruc:string;igv:number};accounts:{code:string;name:string;nature:string;official:boolean;active?:boolean}[];products:Product[];docs:Doc[];entries:Entry[];dark:boolean};
+type AppData={settlements?:Settlement[];inventoryMovements?:InventoryMovement[];closedPeriods?:string[];company:{name:string;ruc:string;igv:number};accounts:ChartAccount[];products:Product[];docs:Doc[];entries:Entry[];dark:boolean};
 const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const money=(n:number)=>new Intl.NumberFormat("es-PE",{style:"currency",currency:"PEN"}).format(n||0);
 const n=(x:number)=>Math.round((x+Number.EPSILON)*100)/100;
 const accounts=[
  ["10","Efectivo y equivalentes de efectivo","Deudora"],["12","Cuentas por cobrar comerciales – terceros","Deudora"],["20","Mercaderías","Deudora"],["40","Tributos, contraprestaciones y aportes por pagar","Acreedora"],["42","Cuentas por pagar comerciales – terceros","Acreedora"],["50","Capital","Acreedora"],["60","Compras","Deudora"],["61","Variación de existencias","Acreedora"],["63","Gastos de servicios prestados por terceros","Deudora"],["69","Costo de ventas","Deudora"],["70","Ventas","Acreedora"],["79","Cargas imputables a cuentas de costos y gastos","Acreedora"]
 ].map(([code,name,nature])=>({code,name,nature,official:true}));
-const initial=():AppData=>({company:{name:"",ruc:"",igv:18},accounts,products:[],docs:[],entries:[],dark:false});
+const initial=():AppData=>({company:{name:"",ruc:"",igv:18},accounts:mergeReferenceChart(accounts,pcge2010),products:[],docs:[],entries:[],dark:false});
 function calc(amount:number,qty:number,included:boolean,tax:string,rate:number){ const gross=n(amount*qty); if(tax!=="Gravado")return{base:gross,igv:0,total:gross}; const base=included?n(gross/(1+rate)):gross; const igv=included?n(gross-base):n(base*rate); return {base,igv,total:included?gross:n(base+igv)}; }
 function entryFromDoc(d:Doc, product?:Product):Entry[]{ const receivable=d.kind==="Venta"?"12":"42", cash="10"; const lines:Line[]=d.kind==="Venta"? [{account:receivable,name:"Cuentas por cobrar comerciales",debit:d.total,credit:0},{account:"40",name:"IGV por pagar",debit:0,credit:d.igv},{account:"70",name:"Ventas",debit:0,credit:d.base}] : [{account:"60",name:"Compras",debit:d.base,credit:0},{account:"40",name:"IGV crédito fiscal",debit:d.igv,credit:0},{account:receivable,name:"Cuentas por pagar comerciales",debit:0,credit:d.total}];
  const arr:Entry[]=[{id:`AS-${d.id}`,date:d.date,type:d.kind,memo:`${d.kind} ${d.party}`,lines}];
@@ -31,7 +33,7 @@ function entryFromDoc(d:Doc, product?:Product):Entry[]{ const receivable=d.kind=
  arr.forEach(validateEntry); return arr; }
 export default function App(){
  const [data,setData]=useState<AppData>(initial),[ready,setReady]=useState(false),[page,setPage]=useState("Dashboard"),[open,setOpen]=useState(false),[modal,setModal]=useState<"doc"|"product"|"entry"|null>(null),[notice,setNotice]=useState("");
- useEffect(()=>{const saved=localStorage.getItem("conta-smart-v1");if(saved)setData(JSON.parse(saved));setReady(true)},[]);useEffect(()=>{if(ready)localStorage.setItem("conta-smart-v1",JSON.stringify(data))},[data,ready]);
+ useEffect(()=>{const saved=localStorage.getItem("conta-smart-v1");if(saved){const previous=JSON.parse(saved);setData({...previous,accounts:mergeReferenceChart(previous.accounts||[],pcge2010)});}setReady(true)},[]);useEffect(()=>{if(ready)localStorage.setItem("conta-smart-v1",JSON.stringify(data))},[data,ready]);
  const update=(f:(x:AppData)=>AppData)=>setData(x=>f(x)); const docs=data.docs.filter(d=>d.status==="Contabilizado");
  const stats=useMemo(()=>{const sales=docs.filter(x=>x.kind==="Venta").reduce((a,x)=>a+x.base,0),buys=docs.filter(x=>x.kind==="Compra").reduce((a,x)=>a+x.total,0);const cash=data.entries.flatMap(e=>e.lines).filter(l=>l.account==="10").reduce((a,l)=>a+l.debit-l.credit,0);return{sales,buys,cash,receivable:data.entries.flatMap(e=>e.lines).filter(l=>l.account==="12").reduce((a,l)=>a+l.debit-l.credit,0),payable:data.entries.flatMap(e=>e.lines).filter(l=>l.account==="42").reduce((a,l)=>a+l.credit-l.debit,0),inventory:data.products.reduce((a,p)=>a+(p.inventoryValueCents??Math.round(p.stock*p.cost*100))/100,0)}} ,[data,docs]);
  const toast=(s:string)=>{setNotice(s);setTimeout(()=>setNotice(""),2800)}; const periodOpen=(date:string)=>{if((data.closedPeriods||[]).includes(date.slice(0,7))){alert("El periodo está cerrado. Reábralo antes de registrar operaciones.");return false;}return true;};

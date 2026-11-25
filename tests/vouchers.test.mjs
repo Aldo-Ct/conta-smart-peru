@@ -51,3 +51,19 @@ test('recibo de servicios públicos controla RUC, servicio y crédito fiscal',()
  assert.equal(entryFromDoc(receipt,service)[0].lines[1].debit,180);
  assert.equal(entryFromDoc({...receipt,taxCreditEligible:false},service)[0].lines[0].debit,1180);
 });
+
+test('recibo 1683 registra alquiler sin IGV y obligación en cuenta 46',async()=>{
+ const receipt={...doc,voucherType:'Recibo por arrendamiento 1683',tax:'Inafecto',taxCreditEligible:undefined,base:350,igv:0,total:350};
+ assert.equal(validateVoucher(receipt,service),true);
+ assert.throws(()=>validateVoucher({...receipt,tax:'Gravado',igv:10},service),/IGV/);
+ assert.throws(()=>validateVoucher({...receipt,document:'12345678'},service),/RUC/);
+ const entries=entryFromDoc(receipt,service);assert.equal(entries[0].lines.find(x=>x.account==='46').credit,350);
+ const paid=createSettlement(receipt,[],{id:'pago',date:'2026-11-25',amount:350});assert.equal(paid.entry.lines[0].account,'46');
+});
+
+test('servidor acepta asiento 1683 nuevo y no crea crédito fiscal',async()=>{
+ const {validateTransition}=await import('../lib/postgres/validate-transition.mjs');
+ const p={id:'alquiler',name:'Alquiler',type:'Servicio',cost:0};
+ const receipt={...doc,id:'alquiler-1',productId:p.id,voucherType:'Recibo por arrendamiento 1683',tax:'Inafecto',taxCreditEligible:undefined,base:350,igv:0,total:350};
+ const data={docs:[receipt],entries:entryFromDoc(receipt,p),products:[p]};assert.doesNotThrow(()=>validateTransition({docs:[],entries:[]},data,'admin'));assert.equal(hasPurchaseTaxCredit(receipt),false);
+});

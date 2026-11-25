@@ -20,7 +20,7 @@ Duración sugerida: 15 minutos, cinco minutos por persona. El sistema es una apl
 2. Explicar una compra de ejemplo de diez unidades por S/ 118 en total, IGV incluido: base S/ 100 e IGV S/ 18, siempre que corresponda crédito fiscal. Elegir proveedor y datos de un comprobante de prueba, no usar números reales inventados.
 3. Mostrar las opciones de pago contado por efectivo o transferencia, y crédito con saldo pendiente. No contabilizar datos ficticios en la empresa de otra persona.
 4. Mostrar que Kardex refleja la entrada; en una venta de dos unidades, explica que deberían quedar ocho. Describir la generación de asiento de venta y costo.
-5. Mostrar servicios como luz o alquiler. Para energía, elegir recibo de servicios públicos y definir crédito fiscal según el documento. Aclarar que 1683 de alquiler y devoluciones siguen pendientes.
+5. Mostrar servicios como luz o alquiler. Para energía, elegir recibo de servicios públicos y definir crédito fiscal según el documento. Mostrar que el recibo 1683 permite registrar el alquiler de primera categoría sin IGV; las devoluciones siguen pendientes.
 6. Dar paso: «Los movimientos registrados se reflejan en tesorería y reportes».
 
 ## Persona 3: tesorería, libros y cierre
